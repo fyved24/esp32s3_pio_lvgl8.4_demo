@@ -23,7 +23,7 @@ TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight); /* TFT instance */
 // FT6336U pins
 #define FT6336U_INT 38 // T_IRQ
 #define FT6336U_SDA 8  // T_SDI
-#define FT6336U_RST 36 // T_CS
+#define FT6336U_RST 35 // T_CS
 #define FT6336U_SCL 9  // T_CLK
 
 // If logging is enabled, it will inform the user about what is happening in the library
@@ -34,7 +34,7 @@ void log_print(lv_log_level_t level, const char *buf)
     Serial.flush();
 }
 
-FT6336U touch_6336(FT6336U_SDA, FT6336U_SCL, FT6336U_INT, &Wire);
+FT6336U ft6336u(FT6336U_SDA, FT6336U_SCL, FT6336U_RST, FT6336U_INT);
 // Get the Touchscreen data
 
 #if LV_USE_LOG != 0
@@ -63,11 +63,12 @@ void my_disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *c
 /*Read the touchpad*/
 void my_touchpad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
 {
-    if (touch_6336.available())
+    FT6336U_TouchPointType touchPoint = ft6336u.scan();
+    if (touchPoint.touch_count)
     {
         data->state = LV_INDEV_STATE_PR;
-        data->point.y = touch_6336.touchPoint.tp[0].x;
-        data->point.x = 319 - touch_6336.touchPoint.tp[0].y;
+        data->point.y = touchPoint.tp[0].x;
+        data->point.x = 319 - touchPoint.tp[0].y;
         printf("Touched");
     }
     else
@@ -87,7 +88,7 @@ void setup()
     Serial.println("I am LVGL_Arduino");
 
     lv_init();
-    touch_6336.begin();
+    ft6336u.begin();
 
 #if LV_USE_LOG != 0
     lv_log_register_print_cb(my_print); /* register print function for debugging */
@@ -126,8 +127,8 @@ void setup()
     // lv_example_btn_1();
 
     /*Or try out a demo. Don't forget to enable the demos in lv_conf.h. E.g. LV_USE_DEMOS_WIDGETS*/
-    // lv_demo_widgets();
-     lv_demo_benchmark();
+    lv_demo_widgets();
+    //  lv_demo_benchmark();
     //  lv_demo_keypad_encoder();
     //  lv_demo_music();
     //  lv_demo_printer();
