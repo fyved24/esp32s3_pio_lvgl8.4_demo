@@ -34,7 +34,7 @@ void log_print(lv_log_level_t level, const char *buf)
     Serial.flush();
 }
 
-FT6336U touch_6336(FT6336U_SDA, FT6336U_SCL, FT6336U_INT, &Wire);
+FT6336U ft6336u(FT6336U_SDA, FT6336U_SCL, FT6336U_RST, FT6336U_INT);
 // Get the Touchscreen data
 
 #if LV_USE_LOG != 0
@@ -60,22 +60,39 @@ void my_disp_flush(lv_disp_drv_t *disp_drv, const lv_area_t *area, lv_color_t *c
     lv_disp_flush_ready(disp_drv);
 }
 
-/*Read the touchpad*/
-void my_touchpad_read(lv_indev_drv_t *indev_drv, lv_indev_data_t *data)
-{
-    if (touch_6336.available())
-    {
-        data->state = LV_INDEV_STATE_PR;
-        data->point.y = touch_6336.touchPoint.tp[0].x;
-        data->point.x = 319 - touch_6336.touchPoint.tp[0].y;
-        printf("Touched");
-    }
-    else
-    {
-        data->state = LV_INDEV_STATE_REL;
+void my_touchpad_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data) {
+    static lv_indev_state_t last_state = LV_INDEV_STATE_REL; // 记录上一次的触摸状态
+    FT6336U_TouchPointType touchPoint = ft6336u.scan();  // 检查触摸屏是否有触摸数据
+    if (touchPoint.touch_count > 0) {  
+        data->state = LV_INDEV_STATE_PR;  // 设置触摸状态为按下
+        data->point.y = touchPoint.tp[0].x;  // 获取触摸点的Y坐标
+        data->point.x = 319 - touchPoint.tp[0].y;  // 获取触摸点的X坐标
+        if (last_state != LV_INDEV_STATE_PR) {  // 如果上次状态不是按下
+            Serial.println("Touched X = " + String(data->point.x) + " Y = " + String(data->point.y));  // 在串口打印触摸坐标
+            Serial.print("FT6336U TD Status: ");
+            Serial.println(ft6336u.read_td_status());
+            Serial.print("FT6336U Touch Event/ID 1: (");
+            Serial.print(ft6336u.read_touch1_event()); Serial.print(" / "); Serial.print(ft6336u.read_touch1_id()); Serial.println(")");
+            Serial.print("FT6336U Touch Position 1: (");
+            Serial.print(ft6336u.read_touch1_x()); Serial.print(" , "); Serial.print(ft6336u.read_touch1_y()); Serial.println(")");
+            Serial.print("FT6336U Touch Weight/MISC 1: (");
+            Serial.print(ft6336u.read_touch1_weight()); Serial.print(" / "); Serial.print(ft6336u.read_touch1_misc()); Serial.println(")");
+            Serial.print("FT6336U Touch Event/ID 2: (");
+            Serial.print(ft6336u.read_touch2_event()); Serial.print(" / "); Serial.print(ft6336u.read_touch2_id()); Serial.println(")");
+            Serial.print("FT6336U Touch Position 2: (");
+            Serial.print(ft6336u.read_touch2_x()); Serial.print(" , "); Serial.print(ft6336u.read_touch2_y()); Serial.println(")");
+            Serial.print("FT6336U Touch Weight/MISC 2: (");
+            Serial.print(ft6336u.read_touch2_weight()); Serial.print(" / "); Serial.print(ft6336u.read_touch2_misc()); Serial.println(")");
+            last_state = LV_INDEV_STATE_PR;  // 更新触摸状态
+        }
+    } else {
+        if (last_state != LV_INDEV_STATE_REL) {  // 如果上次状态不是释放
+            Serial.println("Touch released");  // 在串口打印触摸释放信息
+            last_state = LV_INDEV_STATE_REL;  // 更新触摸状态为释放
+        }
+        data->state = LV_INDEV_STATE_REL;  // 设置触摸状态为释放
     }
 }
-
 void setup()
 {
     Serial.begin(115200); /* prepare for possible serial debug */
@@ -87,7 +104,7 @@ void setup()
     Serial.println("I am LVGL_Arduino");
 
     lv_init();
-    touch_6336.begin();
+    ft6336u.begin();
 
 #if LV_USE_LOG != 0
     lv_log_register_print_cb(my_print); /* register print function for debugging */
@@ -126,8 +143,8 @@ void setup()
     // lv_example_btn_1();
 
     /*Or try out a demo. Don't forget to enable the demos in lv_conf.h. E.g. LV_USE_DEMOS_WIDGETS*/
-    // lv_demo_widgets();
-     lv_demo_benchmark();
+    lv_demo_widgets();
+    //  lv_demo_benchmark();
     //  lv_demo_keypad_encoder();
     //  lv_demo_music();
     //  lv_demo_printer();
