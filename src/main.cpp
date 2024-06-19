@@ -21,10 +21,10 @@ TFT_eSPI tft = TFT_eSPI(screenWidth, screenHeight); /* TFT instance */
 
 #include "FT6336U.h"
 // FT6336U pins
-#define FT6336U_INT 38 // T_IRQ
-#define FT6336U_SDA 8  // T_SDI
-#define FT6336U_RST 36 // T_CS
-#define FT6336U_SCL 9  // T_CLK
+#define FT6336U_INT 26 // T_IRQ
+#define FT6336U_SDA 21 // T_SDI
+#define FT6336U_RST 27 // T_CS
+#define FT6336U_SCL 22 // T_CLK
 
 // If logging is enabled, it will inform the user about what is happening in the library
 void log_print(lv_log_level_t level, const char *buf)
